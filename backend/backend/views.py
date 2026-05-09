@@ -43,18 +43,47 @@ def job_list(request):
 
 @api_view(['POST'])
 def apply_job(request):
-    serializer = ApplicationSerializer(data=request.data)
-    job_id = request.data.get("job")
-    applicant_id = request.data.get("applicant")
     
-    # check application exists
-    if Application.objects.filter(job_id=job_id,applicant_id=applicant_id).exists():
-        return Response({"message": "You already have applied!"}, status=status.HTTP_400_BAD_REQUEST)
-    if serializer.is_valid():
-        serializer.save()
-        return Response({"message": "Application Submitted"}, status=status.HTTP_201_CREATED)
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    try:
 
+        job_id = request.data.get("job")
+        applicant_id = request.data.get("applicant")
+
+        if Application.objects.filter(
+            job_id=job_id,
+            applicant_id=applicant_id
+        ).exists():
+
+            return Response(
+                {"message": "You already applied!"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        serializer = ApplicationSerializer(data={
+            "job": job_id,
+            "applicant": applicant_id
+        })
+
+        if serializer.is_valid():
+
+            serializer.save()
+
+            return Response(
+                {"message": "Application Submitted"},
+                status=status.HTTP_201_CREATED
+            )
+
+        return Response(
+            serializer.errors,
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    except Exception as e:
+
+        return Response(
+            {"message": str(e)},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
 @api_view(['GET'])
 def job_titles(request):
     jobs = Job.objects.values('id', 'title')
@@ -62,10 +91,27 @@ def job_titles(request):
 
 @api_view(['GET'])
 def user_applied_jobs(request, user_id):
-    applications = Application.objects.filter(applicant_id=user_id)
-    serializer = ApplicationSerializer(applications, many=True)
-    return Response(serializer.data)
 
+    applications = Application.objects.filter(
+        applicant_id=user_id
+    ).values(
+        'id',
+        'status',
+        'applied_on',
+        'job__title'
+    )
+
+    data = []
+
+    for app in applications:
+        data.append({
+            "id": app['id'],
+            "job_title": app['job__title'],
+            "status": app['status'],
+            "applied_on": app['applied_on']
+        })
+
+    return Response(data)
 @api_view(['GET'])
 def jobs_by_company(request, company_name):
     jobs = Job.objects.filter(company__iexact=company_name)

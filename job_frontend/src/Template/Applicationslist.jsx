@@ -65,7 +65,7 @@ function ApplicationsPage() {
                 <div key={app.id} className="bg-white border rounded-lg p-4">
 
                   <p className="text-sm text-gray-600">
-                    Job ID: {app.job}
+                    Job ID: {app.job_title}
                   </p>
 
                   <p className="text-sm">
